@@ -1,0 +1,12 @@
+
+<suite name="Grid Suite">
+
+    <test name="Chrome_Test">
+        <parameter name="browser" value="chrome"/>
+        <parameter name="gridUrl" value="http://localhost:4444"/>
+        <classes>
+            <class name="demo.GridLoginTest"/>
+        </classes>
+    </test>
+
+</suite>
