@@ -2,145 +2,70 @@ package demo;
 
 import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
+
 import io.restassured.RestAssured;
-import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.firefox.FirefoxOptions;
+import org.testng.Assert;
+import org.testng.ITestResult;
+import org.testng.annotations.*;
 
-import org.openqa.selenium.WebDriver; 
+import java.net.URL;
 
-import org.openqa.selenium.remote.RemoteWebDriver; 
+public class GridLoginTest {
 
-import org.openqa.selenium.chrome.ChromeOptions; 
+    private static ThreadLocal<WebDriver> driver = new ThreadLocal<>();
 
-import org.openqa.selenium.firefox.FirefoxOptions; 
+    @Parameters({"browser", "gridUrl"})
+    @BeforeMethod
+    public void setUp(String browser, String gridUrl) throws Exception {
+        if (browser.equalsIgnoreCase("chrome")) {
+            ChromeOptions options = new ChromeOptions();
+            options.addArguments("--start-maximized");
+            driver.set(new RemoteWebDriver(new URL(gridUrl), options));
+        } else if (browser.equalsIgnoreCase("firefox")) {
+            FirefoxOptions options = new FirefoxOptions();
+            driver.set(new RemoteWebDriver(new URL(gridUrl), options));
+        } else {
+            throw new RuntimeException("Unsupported browser: " + browser);
+        }
+    }
 
-import org.testng.Assert; 
+    @Test
+    public void openHomePageAndVerifyTitle() {
+        driver.get().get("https://example.com");
+        String title = driver.get().getTitle();
+        System.out.println("Page title = " + title);
+        Assert.assertTrue(title != null && !title.trim().isEmpty(), "Title should not be empty");
+    }
 
-import org.testng.annotations.*; 
+    @Test
+    public void postest() {
+        baseURI = "https://jsonplaceholder.typicode.com";
+        RestAssured.useRelaxedHTTPSValidation();
 
- 
+        given()
+            .relaxedHTTPSValidation()
+            .log().all()
+        .when()
+            .get("/posts/1")
+        .then()
+            .log().all()
+            .statusCode(200);
+    }
 
-import java.net.URL; 
+    @AfterMethod(alwaysRun = true)
+    public void tearDown(ITestResult result) {
+        // Capture screenshot on failure
+        if (result.getStatus() == ITestResult.FAILURE) {
+            ScreenshotUtil.takeScreenshot(driver.get(), result.getName() + "_failed");
+        }
 
- 
-
-public class GridLoginTest { 
-
- 
-
-    // ThreadLocal is important when running parallel (each thread gets its own driver) 
-
-    private static ThreadLocal<WebDriver> driver = new ThreadLocal<>(); 
-
- 
-
-    @Parameters({"browser", "gridUrl"}) 
-
-    @BeforeMethod 
-
-    public void setUp(String browser, String gridUrl) throws Exception { 
-
- 
-
-        // 1) Decide browser options based on parameter 
-
-        if (browser.equalsIgnoreCase("chrome")) { 
-
-            ChromeOptions options = new ChromeOptions(); 
-
-            options.addArguments("--start-maximized"); 
-
-            // For CI machines without display: 
-
-            // options.addArguments("--headless=new"); 
-
- 
-
-            driver.set(new RemoteWebDriver(new URL(gridUrl), options)); 
-
- 
-
-        } else if (browser.equalsIgnoreCase("firefox")) { 
-
-            FirefoxOptions options = new FirefoxOptions(); 
-
-            // options.addArguments("-headless"); 
-
- 
-
-            driver.set(new RemoteWebDriver(new URL(gridUrl), options)); 
-
- 
-
-        } else { 
-
-            throw new RuntimeException("Unsupported browser: " + browser); 
-
-        } 
-
-    } 
-
- 
-
-    @Test 
-
-    public void openHomePageAndVerifyTitle() { 
-
-        driver.get().get("https://example.com"); 
-
- 
-
-        String title = driver.get().getTitle(); 
-
-        System.out.println("Page title = " + title); 
-
- 
-
-        // Simple assertion for 
-
-        Assert.assertTrue(title != null && !title.trim().isEmpty(), "Title should not be empty"); 
-
-    } 
-
- @Test
-public void postest() {
-    baseURI = "https://jsonplaceholder.typicode.com";
-    RestAssured.useRelaxedHTTPSValidation();
-
-    // Example: after setting up driver
-    WebDriver driver = new ChromeDriver(); // if you’re running Selenium
-    ScreenshotUtil.takeScreenshot(driver, "beforeGet");
-
-    given()
-        .relaxedHTTPSValidation()
-        .log().all()
-    .when()
-        .get("/posts/1")
-    .then()
-        .log().all()
-        .statusCode(200);
-
-    ScreenshotUtil.takeScreenshot(driver, "afterGet");
-    driver.quit();
+        if (driver.get() != null) {
+            driver.get().quit();
+        }
+        driver.remove();
+    }
 }
-
-
- 
-
-    @AfterMethod(alwaysRun = true) 
-
-    public void tearDown() { 
-     if (ITestResult.FAILURE == result.getStatus()) { 
-      ScreenshotUtil.takeScreenshot(driver, result.getName() + "_failed"); 
-     }
-
-        if (driver.get() != null) { 
-
-            driver.get().quit(); 
-
-        } 
-
-        driver.remove(); 
-
-    } 
-
-} 
