@@ -1,7 +1,9 @@
 package demo;
- 
 
- 
+import static io.restassured.RestAssured.baseURI;
+import static io.restassured.RestAssured.given;
+import io.restassured.RestAssured;
+import org.openqa.selenium.chrome.ChromeDriver;
 
 import org.openqa.selenium.WebDriver; 
 
