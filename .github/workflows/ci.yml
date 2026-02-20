@@ -1,23 +1,74 @@
-name: Run Selenium Tests
+name: Maven TestNG with Selenium Service
 
 on:
   push:
     branches: [ main ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4   # GitHub official checkout action
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chrome, firefox]
 
-      - name: Set up Java 17
+    # Start a Selenium container as a service **per matrix browser**
+    services:
+      selenium:
+        image: selenium/standalone-${{ matrix.browser }}:latest
+        ports:
+          - 4444:4444
+        options: >-
+          --shm-size=2g
+        # (Optional) health check if your image supports it; we’ll also do a curl loop below
+
+    env:
+      CI: "true"   # so you can enable headless in code if you want
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Run tests with Maven
-        run: mvn -B test
+      - name: Wait for Selenium to be ready
+        run: |
+          echo "Waiting for Selenium Grid at http://localhost:4444/status ..."
+          for i in {1..30}; do
+            if curl -s http://localhost:4444/status | grep -q '"ready":true'; then
+              echo "Selenium is ready"; break
+            fi
+            echo "Not ready yet... ($i)"
+            sleep 2
+          done
+
+      - name: Run tests (browser=${{ matrix.browser }})
+        run: |
+          mvn -B -e \
+            -Dbrowser=${{ matrix.browser }} \
+            -DgridUrl=http://localhost:4444/wd/hub \
+            test
+
+      - name: Upload Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-${{ matrix.browser }}
+          path: "**/target/surefire-reports/**/*"
+
+      - name: Upload TestNG reports (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testng-${{ matrix.browser }}
+          path: |
+            **/test-output/**/*
+            **/target/testng-results.xml
+          if-no-files-found: ignore
