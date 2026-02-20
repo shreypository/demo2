@@ -99,11 +99,37 @@ public class GridLoginTest {
 
     } 
 
+ @Test
+public void postest() {
+    baseURI = "https://jsonplaceholder.typicode.com";
+    RestAssured.useRelaxedHTTPSValidation();
+
+    // Example: after setting up driver
+    WebDriver driver = new ChromeDriver(); // if you’re running Selenium
+    ScreenshotUtil.takeScreenshot(driver, "beforeGet");
+
+    given()
+        .relaxedHTTPSValidation()
+        .log().all()
+    .when()
+        .get("/posts/1")
+    .then()
+        .log().all()
+        .statusCode(200);
+
+    ScreenshotUtil.takeScreenshot(driver, "afterGet");
+    driver.quit();
+}
+
+
  
 
     @AfterMethod(alwaysRun = true) 
 
     public void tearDown() { 
+     if (ITestResult.FAILURE == result.getStatus()) { 
+      ScreenshotUtil.takeScreenshot(driver, result.getName() + "_failed"); 
+     }
 
         if (driver.get() != null) { 
 
